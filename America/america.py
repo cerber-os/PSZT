@@ -127,9 +127,6 @@ def get_capitals_list() -> list:
 # Genius AI implementation
 ##############################
 
-# Frequency of mutation - (1 = always, 0 = never)
-MUTATION_K = 0.1
-
 class Path:
     def __init__(self, length: int, vertices=None):
         if not vertices:
@@ -236,6 +233,7 @@ def ai_main(population_size: int, generations_count: int, mutation_factor: float
         # Record best member
         bests.append(best_member.length())
     
+    info('Lowest score found:', min(bests))
     plt.scatter(range(generations_count), bests, s=1)
     plt.show()
 
