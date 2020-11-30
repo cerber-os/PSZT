@@ -148,7 +148,8 @@ class Path:
         self.vertices[pos1], self.vertices[pos2] = self.vertices[pos2], self.vertices[pos1]
 
     # Reproductions
-    def reproduce_pmr(self, parent2: 'Path') -> 'Path':
+    def reproduce_pmx(self, parent2: 'Path') -> tuple:
+
         return parent2
 
 
@@ -165,7 +166,9 @@ def ai_main(population_size: int, generations_count: int, mutation_factor: float
         new_population = []
         for A in best_part_population:
             for B in best_part_population:
-                new_population.append(A.reproduce_pmr(B))
+                child1, child2 = A.reproduce_pmr(B)
+                new_population.append(child1)
+                new_population.append(child2)
         population = new_population[0:population_size]
 
         # Apply mutation
