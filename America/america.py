@@ -6,7 +6,7 @@ import re
 import requests
 
 from bs4 import BeautifulSoup
-from math import radians, sin, cos, sqrt, asin
+from math import radians, sin, cos, sqrt, asin, log2
 
 ##############################
 # Loggers
@@ -125,6 +125,10 @@ def get_capitals_list() -> list:
 ##############################
 # Genius AI implementation
 ##############################
+
+# Frequency of mutation - (1 = always, 0 = never)
+MUTATION_K = 0.2
+
 class Path:
     def __init__(self, length: int):
         self.vertices = [i for i in range(length)]
@@ -138,21 +142,39 @@ class Path:
         return total
     
     # Mutations
-    def mutate(self):
+    def mutate_swap(self):
         pos1 = random.randint(0, len(self.vertices) - 1)
         pos2 = random.randint(0, len(self.vertices) - 1)
         self.vertices[pos1], self.vertices[pos2] = self.vertices[pos2], self.vertices[pos1]
 
     # Reproductions
-    def reproduce_pmr(self):
-        pass
+    def reproduce_pmr(self, parent2: 'Path') -> 'Path':
+        return parent2
 
 
-def ai_main(population_size: int, generations_count: int):
+def ai_main(population_size: int, generations_count: int, mutation_factor: float):
+    logn_population_size = int(round(log2(population_size) + 1))
+
     population = [Path(len(capitals)) for _ in range(population_size)]
     for generation in range(generations_count):
         population = sorted(population, key=lambda x: x.length())
-        # TODO:
+        best_member = population[-1]
+        
+        # Reproduce best members
+        best_part_population = population[-logn_population_size:]
+        new_population = []
+        for A in best_part_population:
+            for B in best_part_population:
+                new_population.append(A.reproduce_pmr(B))
+        population = new_population[0:population_size]
+
+        # Apply mutation
+        if mutation_factor > random.uniform(0, 1):
+            pos = random.randint(0, population_size - 1)
+            population[pos].mutate_swap()
+        
+        # Record best member
+        info(generation, best_member.length())
 
 
 ##############################
@@ -162,6 +184,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Solve TSP using genetic algorithms')
     parser.add_argument('--population_size', type=int, default=10, help='The size of population used')
     parser.add_argument('--generations_count', type=int, default=1000, help='The number of algorithm iterations')
+    parser.add_argument('--mutation_factor', type=float, default=0.2, help='Frequency of mutation (1 = always; 0 = never)')
     args = parser.parse_args()
 
     capitals = get_capitals_list()
@@ -172,6 +195,6 @@ if __name__ == '__main__':
         for j, B in enumerate(capitals):
             distances[(i, j)] = A.distance(B)
 
-    ai_main(args.population_size, args.generations_count)
+    ai_main(args.population_size, args.generations_count, args.mutation_factor)
 
     info('Finished')
