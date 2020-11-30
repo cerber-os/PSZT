@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
+import argparse
 import pickle
+import random
 import re
 import requests
 
@@ -37,6 +39,10 @@ class Capital:
 
     @staticmethod
     def _convert(cord: str) -> float:
+        '''
+            Convert provided string representing geograhpical location
+            to degrees
+        '''
         positive = cord[-1] in ['N', 'E']
         match = re.match(r'(\d+).(\d+).(\d+){0,1}.*', cord)
         d, m, = float(match.group(1)), float(match.group(2))
@@ -45,7 +51,12 @@ class Capital:
         return (d + m / 60.0 + s / 3600.0) * (1 if positive else -1)
 
     def distance(self, other_city: 'Capital') -> float:
-        # https://en.wikipedia.org/wiki/Haversine_formula
+        '''
+            Calculate distance between two cities using Haversine formula:
+                https://en.wikipedia.org/wiki/Haversine_formula
+            Assume that earth radius is 6371km and it's a perfect sphere
+            Returned distance is in kilometers (km)
+        '''
         lat_diff = other_city.lat - self.lat
         lon_diff = other_city.lon - self.lon
 
@@ -55,6 +66,11 @@ class Capital:
         return d
 
 def download_capitals_list() -> list:
+    '''
+        Download names and positiions of capitals of all countries located in
+        both North and South America. Use wikipedia articles to gather necessary
+        information
+    '''
     result = []
 
     r = requests.get('https://en.wikipedia.org/wiki/Americas')
@@ -90,6 +106,11 @@ def download_capitals_list() -> list:
     return  result
 
 def get_capitals_list() -> list:
+    '''
+        Try to read capitals list from the locally cached file.
+        In case its missing, download list from the web using 
+        `download_capitals_list` function
+    '''
     try:
         with open('resources/capitals.pkl', 'rb') as f:
             return pickle.load(f)
@@ -104,13 +125,53 @@ def get_capitals_list() -> list:
 ##############################
 # Genius AI implementation
 ##############################
+class Path:
+    def __init__(self, length: int):
+        self.vertices = [i for i in range(length)]
+        random.shuffle(self.vertices)
+    
+    def length(self) -> float:
+        total = 0.0
+        for i in range(len(self.vertices) - 1):
+            total += distances[(self.vertices[i], self.vertices[i+1])]
+        total += distances[(self.vertices[-1], self.vertices[0])]
+        return total
+    
+    # Mutations
+    def mutate(self):
+        pos1 = random.randint(0, len(self.vertices) - 1)
+        pos2 = random.randint(0, len(self.vertices) - 1)
+        self.vertices[pos1], self.vertices[pos2] = self.vertices[pos2], self.vertices[pos1]
 
-# TODO: ...
+    # Reproductions
+    def reproduce_pmr(self):
+        pass
 
+
+def ai_main(population_size: int, generations_count: int):
+    population = [Path(len(capitals)) for _ in range(population_size)]
+    for generation in range(generations_count):
+        population = sorted(population, key=lambda x: x.length())
+        # TODO:
+
+
+##############################
+# Entry point
+##############################
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Solve TSP using genetic algorithms')
+    parser.add_argument('--population_size', type=int, default=10, help='The size of population used')
+    parser.add_argument('--generations_count', type=int, default=1000, help='The number of algorithm iterations')
+    args = parser.parse_args()
+
     capitals = get_capitals_list()
     info(f'Loaded {len(capitals)} capitals')
 
-    print(capitals[0])
-    print(capitals[1])
-    print(capitals[0].distance(capitals[1])) #3387.15
+    distances = {}
+    for i, A in enumerate(capitals):
+        for j, B in enumerate(capitals):
+            distances[(i, j)] = A.distance(B)
+
+    ai_main(args.population_size, args.generations_count)
+
+    info('Finished')
