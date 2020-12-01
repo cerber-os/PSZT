@@ -7,6 +7,7 @@ import requests
 
 from bs4 import BeautifulSoup
 from math import radians, sin, cos, sqrt, asin, log2
+import matplotlib.pyplot as plt
 
 ##############################
 # Loggers
@@ -63,7 +64,7 @@ class Capital:
         earth_radius = 6371
         a = sin(lat_diff / 2) ** 2 + cos(self.lat) * cos(other_city.lat) * (sin(lon_diff / 2) ** 2)
         d = 2 * earth_radius * asin(sqrt(a))
-        return d
+        return round(d)
 
 def download_capitals_list() -> list:
     '''
@@ -126,20 +127,31 @@ def get_capitals_list() -> list:
 # Genius AI implementation
 ##############################
 
-# Frequency of mutation - (1 = always, 0 = never)
-MUTATION_K = 0.2
-
 class Path:
-    def __init__(self, length: int):
-        self.vertices = [i for i in range(length)]
-        random.shuffle(self.vertices)
+    def __init__(self, length: int, vertices=None):
+        if not vertices:
+            self.vertices = [i for i in range(length)]
+            random.shuffle(self.vertices)
+        else:
+            self.vertices = vertices
+
     
+    def isValid(self) -> bool:
+        '''
+            Check if each verticle is present only once in vector
+        '''
+        if len(set(self.vertices)) != len(self.vertices) or len(self.vertices) != len(capitals):
+            error('Path is invalid!')
+            return False
+        else:
+            return True
+
     def length(self) -> float:
         total = 0.0
         for i in range(len(self.vertices) - 1):
             total += distances[(self.vertices[i], self.vertices[i+1])]
         total += distances[(self.vertices[-1], self.vertices[0])]
-        return total
+        return total if self.isValid() else 0.0
     
     # Mutations
     def mutate_swap(self):
@@ -149,11 +161,53 @@ class Path:
 
     # Reproductions
     def reproduce_pmx(self, parent2: 'Path') -> tuple:
+        pos1 = random.randint(0, len(self.vertices) - 2)
+        pos2 = random.randint(pos1, len(self.vertices) - 1)
 
-        return parent2
+        t1, t2 = {}, {}
+        for i in range(pos1, pos2 + 1):
+            t1[self.vertices[i]] = parent2.vertices[i]
+            t2[parent2.vertices[i]] = self.vertices[i]
+
+        child1, child2 = [], []
+
+        def pos_filler(i):
+            def key_finder(what, where):
+                key = what
+                while key in where:
+                    key = where[key]
+                return key
+
+            p1 = self.vertices[i]
+            p2 = parent2.vertices[i]
+
+            if p1 in t2:
+                child1.append(key_finder(p1, t2))
+            else:
+                child1.append(self.vertices[i])
+            if p2 in t1:
+                child2.append(key_finder(p2, t1))
+            else:
+                child2.append(parent2.vertices[i])
+
+        # Left part
+        for idx in range(0, pos1):
+            pos_filler(idx)
+
+        # Middle part - swap it
+        for i in range(pos1, pos2 + 1):
+            child1.append(parent2.vertices[i])
+            child2.append(self.vertices[i])
+        
+        # Right part - the same as left part
+        for idx in range(pos2 + 1, len(self.vertices)):
+            pos_filler(idx)
+
+        return Path(0, child1), Path(0, child2)
 
 
 def ai_main(population_size: int, generations_count: int, mutation_factor: float):
+    bests = []
     logn_population_size = int(round(log2(population_size) + 1))
 
     population = [Path(len(capitals)) for _ in range(population_size)]
@@ -162,11 +216,11 @@ def ai_main(population_size: int, generations_count: int, mutation_factor: float
         best_member = population[-1]
         
         # Reproduce best members
-        best_part_population = population[-logn_population_size:]
+        best_part_population = population[:logn_population_size]
         new_population = []
         for A in best_part_population:
             for B in best_part_population:
-                child1, child2 = A.reproduce_pmr(B)
+                child1, child2 = A.reproduce_pmx(B)
                 new_population.append(child1)
                 new_population.append(child2)
         population = new_population[0:population_size]
@@ -177,7 +231,11 @@ def ai_main(population_size: int, generations_count: int, mutation_factor: float
             population[pos].mutate_swap()
         
         # Record best member
-        info(generation, best_member.length())
+        bests.append(best_member.length())
+    
+    info('Lowest score found:', min(bests))
+    plt.scatter(range(generations_count), bests, s=1)
+    plt.show()
 
 
 ##############################
