@@ -255,6 +255,39 @@ class Path:
 
         return Path(0, child1), Path(0, child2)
 
+    def reproduce_cx(self, parent2: 'Path') -> tuple:
+        # First offspring
+        child1 = [-1] * len(self.vertices)         
+        first_city = self.vertices[0]
+        child1[0] = first_city
+        index = 0
+        while True: # first part of algorithm
+            second_parent_value = parent2.vertices[index]
+            index = self.vertices.index(second_parent_value)
+            if second_parent_value == first_city:
+                break
+            child1[index] = second_parent_value
+        for i in range(len(child1)): # second part
+            if child1[i] == -1:
+                child1[i] = parent2.vertices[i]
+
+        # Second offspring 
+        child2 = [-1] * len(parent2.vertices)         
+        first_city = parent2.vertices[0]
+        child2[0] = first_city
+        index = 0
+        while True: # first part of algorithm
+            second_parent_value = self.vertices[index]
+            index = parent2.vertices.index(second_parent_value)
+            if second_parent_value == first_city:
+                break
+            child2[index] = second_parent_value
+        for i in range(len(child2)): # second part
+            if child2[i] == -1:
+                child2[i] = self.vertices[i]
+
+        return Path(0, child1), Path(0, child2)
+
 def ai_main(population_size: int, generations_count: int, mutation_factor: float):
     bests = []
     logn_population_size = int(round(log2(population_size) + 1))
@@ -271,7 +304,7 @@ def ai_main(population_size: int, generations_count: int, mutation_factor: float
         for A in best_part_population:
             for B in best_part_population:
                 # child1, child2 = A.reproduce_pmx(B)
-                child1, child2 = A.reproduce_ox(B)
+                child1, child2 = A.reproduce_cx(B)
                 new_population.append(child1)
                 new_population.append(child2)
         
