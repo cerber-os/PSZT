@@ -255,16 +255,16 @@ class Path:
 
         return Path(0, child1), Path(0, child2)
 
-
 def ai_main(population_size: int, generations_count: int, mutation_factor: float):
     bests = []
     logn_population_size = int(round(log2(population_size) + 1))
 
     population = [Path(len(capitals)) for _ in range(population_size)]
-    for generation in range(generations_count):
-        population = sorted(population, key=lambda x: x.length())
-        best_member = population[-1]
-        
+    # Generation 0
+    population = sorted(population, key=lambda x: x.length())
+    best_member = population[-1]
+    bests.append(best_member.length())
+    for generation in range(generations_count):        
         # Reproduce best members
         best_part_population = population[:logn_population_size]
         new_population = []
@@ -274,18 +274,22 @@ def ai_main(population_size: int, generations_count: int, mutation_factor: float
                 child1, child2 = A.reproduce_ox(B)
                 new_population.append(child1)
                 new_population.append(child2)
-        population = new_population[0:population_size]
-
-        # Apply mutation
-        if mutation_factor > random.uniform(0, 1):
-            pos = random.randint(0, population_size - 1)
-            population[pos].mutate_swap()
         
+        # Apply mutation for the best members
+        for i in range(len(new_population)):
+            if mutation_factor > random.uniform(0, 1):
+                new_population[i].mutate_swap()
+        
+        population = population + new_population
+        population = sorted(population, key=lambda x: x.length())
+        population = population[:population_size-1]
+        best_member = population[-1]
+
         # Record best member
         bests.append(best_member.length())
     
     info('Lowest score found:', min(bests))
-    plt.scatter(range(generations_count), bests, s=1)
+    plt.scatter(range(generations_count+1), bests, s=1)
     plt.show()
 
 
