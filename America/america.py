@@ -165,7 +165,7 @@ class Path:
         pos2 = random.randint(pos1, len(self.vertices) - 1)
 
         t1, t2 = {}, {}
-        for i in range(pos1, pos2 + 1):
+        for i in range(pos1, pos2 + 1): # create mappings
             t1[self.vertices[i]] = parent2.vertices[i]
             t2[parent2.vertices[i]] = self.vertices[i]
 
@@ -205,36 +205,124 @@ class Path:
 
         return Path(0, child1), Path(0, child2)
 
+    def reproduce_ox(self, parent2: 'Path') -> tuple:
+        pos1 = random.randint(0, len(self.vertices) - 2)
+        pos2 = random.randint(pos1, len(self.vertices) - 1)
+
+        t1, t2 = self.vertices.copy(), parent2.vertices.copy()
+        for i in range(len(t1)):
+            for j in range(pos1, pos2 + 1):
+                if t1[i] == parent2.vertices[j]:
+                    t1[i] = -1
+                if t2[i] == self.vertices[j]:
+                    t2[i] = -1
+        
+        def pop_append(data, shift):
+            for _ in range(shift):
+                data.append(data.pop(0))
+            return data
+        
+        t1 = pop_append(t1, pos2 + 1)
+        t2 = pop_append(t2, pos2 + 1)
+        
+        child1, child2 = self.vertices.copy(), parent2.vertices.copy()
+
+        # Right part
+        for i in range(pos2 + 1, len(self.vertices)):
+            x = -1
+            while x == -1:
+                x = t2.pop(0)
+            child1[i] = x
+
+            x = -1
+            while x == -1:
+                x = t1.pop(0)
+            child2[i] = x
+
+        # Left part
+        for i in range(0, pos1):
+            x = -1
+            while x == -1:
+                x = t2.pop(0)
+            child1[i] = x
+
+            x = -1
+            while x == -1:
+                x = t1.pop(0)
+            child2[i] = x
+
+        # Middle part - already done
+
+        return Path(0, child1), Path(0, child2)
+
+    def reproduce_cx(self, parent2: 'Path') -> tuple:
+        # First offspring
+        child1 = [-1] * len(self.vertices)         
+        first_city = self.vertices[0]
+        child1[0] = first_city
+        index = 0
+        while True: # first part of algorithm
+            second_parent_value = parent2.vertices[index]
+            index = self.vertices.index(second_parent_value)
+            if second_parent_value == first_city:
+                break
+            child1[index] = second_parent_value
+        for i in range(len(child1)): # second part
+            if child1[i] == -1:
+                child1[i] = parent2.vertices[i]
+
+        # Second offspring 
+        child2 = [-1] * len(parent2.vertices)         
+        first_city = parent2.vertices[0]
+        child2[0] = first_city
+        index = 0
+        while True: # first part of algorithm
+            second_parent_value = self.vertices[index]
+            index = parent2.vertices.index(second_parent_value)
+            if second_parent_value == first_city:
+                break
+            child2[index] = second_parent_value
+        for i in range(len(child2)): # second part
+            if child2[i] == -1:
+                child2[i] = self.vertices[i]
+
+        return Path(0, child1), Path(0, child2)
 
 def ai_main(population_size: int, generations_count: int, mutation_factor: float):
     bests = []
     logn_population_size = int(round(log2(population_size) + 1))
 
     population = [Path(len(capitals)) for _ in range(population_size)]
-    for generation in range(generations_count):
-        population = sorted(population, key=lambda x: x.length())
-        best_member = population[-1]
-        
+    # Generation 0
+    population = sorted(population, key=lambda x: x.length())
+    best_member = population[-1]
+    bests.append(best_member.length())
+    for generation in range(generations_count):        
         # Reproduce best members
         best_part_population = population[:logn_population_size]
         new_population = []
         for A in best_part_population:
             for B in best_part_population:
-                child1, child2 = A.reproduce_pmx(B)
+                # child1, child2 = A.reproduce_pmx(B)
+                child1, child2 = A.reproduce_cx(B)
                 new_population.append(child1)
                 new_population.append(child2)
-        population = new_population[0:population_size]
-
-        # Apply mutation
-        if mutation_factor > random.uniform(0, 1):
-            pos = random.randint(0, population_size - 1)
-            population[pos].mutate_swap()
         
+        # Apply mutation for the best members
+        for i in range(len(new_population)):
+            if mutation_factor > random.uniform(0, 1):
+                new_population[i].mutate_swap()
+        
+        population = population + new_population
+        population = sorted(population, key=lambda x: x.length())
+        population = population[:population_size-1]
+        best_member = population[-1]
+
         # Record best member
         bests.append(best_member.length())
     
     info('Lowest score found:', min(bests))
-    plt.scatter(range(generations_count), bests, s=1)
+    plt.scatter(range(generations_count+1), bests, s=1)
     plt.show()
 
 
