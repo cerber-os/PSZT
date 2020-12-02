@@ -1,0 +1,8 @@
+argparse
+pickle
+random
+re
+requests
+bs4
+math
+matplotlib
