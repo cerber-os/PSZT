@@ -1,8 +1,4 @@
-argparse
-pickle
-random
-re
 requests
-bs4
-math
+beautifulsoup4
 matplotlib
+
