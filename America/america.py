@@ -288,9 +288,9 @@ class Path:
 
         return Path(0, child1), Path(0, child2)
 
-def ai_main(population_size: int, generations_count: int, mutation_factor: float):
+def ai_main(population_size: int, generations_count: int, mutation_factor: float, algorithm: int):
     bests = []
-    logn_population_size = int(round(log2(population_size) + 1))
+    logn_population_size = int(round(sqrt(population_size) + 1))
 
     population = [Path(len(capitals)) for _ in range(population_size)]
     # Generation 0
@@ -303,19 +303,27 @@ def ai_main(population_size: int, generations_count: int, mutation_factor: float
         new_population = []
         for A in best_part_population:
             for B in best_part_population:
-                # child1, child2 = A.reproduce_pmx(B)
-                child1, child2 = A.reproduce_cx(B)
+                if algorithm == 0:
+                    child1, child2 = A.reproduce_pmx(B)
+                elif algorithm == 1:
+                    child1, child2 = A.reproduce_ox(B)
+                elif algorithm == 2:
+                    child1, child2 = A.reproduce_cx(B)
+                else:
+                    error('Invalid algorithm code!')
+                    exit(1)
                 new_population.append(child1)
                 new_population.append(child2)
-        
-        # Apply mutation for the best members
-        for i in range(len(new_population)):
-            if mutation_factor > random.uniform(0, 1):
-                new_population[i].mutate_swap()
         
         population = population + new_population
         population = sorted(population, key=lambda x: x.length())
         population = population[:population_size-1]
+
+        # Apply mutation for the population members
+        for i in range(len(population)):
+            if mutation_factor > random.uniform(0, 1):
+                population[i].mutate_swap()
+
         best_member = population[-1]
 
         # Record best member
@@ -334,6 +342,7 @@ if __name__ == '__main__':
     parser.add_argument('--population_size', type=int, default=10, help='The size of population used')
     parser.add_argument('--generations_count', type=int, default=1000, help='The number of algorithm iterations')
     parser.add_argument('--mutation_factor', type=float, default=0.2, help='Frequency of mutation (1 = always; 0 = never)')
+    parser.add_argument('--algorithm', type=int, default=0, help='Algorithm to use (0 = PMX; 1 = OX, 2 = CX)')
     args = parser.parse_args()
 
     capitals = get_capitals_list()
@@ -344,6 +353,6 @@ if __name__ == '__main__':
         for j, B in enumerate(capitals):
             distances[(i, j)] = A.distance(B)
 
-    ai_main(args.population_size, args.generations_count, args.mutation_factor)
+    ai_main(args.population_size, args.generations_count, args.mutation_factor, args.algorithm)
 
     info('Finished')
